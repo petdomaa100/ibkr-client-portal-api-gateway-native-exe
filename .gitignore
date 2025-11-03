@@ -1,0 +1,14 @@
+*
+
+!.gitignore
+!.github
+!.github/**/*
+
+!README.md
+!clientportal.gw.zip
+
+!META-INF
+!META-INF/**/*
+
+!scripts
+!scripts/*

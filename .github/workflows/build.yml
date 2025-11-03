@@ -1,0 +1,101 @@
+name: Build Native EXEs
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag'
+        required: true
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            platform: linux-amd64
+          - os: windows-latest
+            platform: windows-amd64
+          - os: macos-latest
+            platform: darwin-arm64
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+
+      - name: Prepare directory
+        shell: bash
+        run: |
+          unzip clientportal.gw.zip
+
+          cp root/conf.yaml root/logback.xml root/vertx.jks .
+
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp scripts/run.bat .
+          else
+            cp scripts/run.sh .
+          fi
+
+          ls -1
+
+      - name: Build Image (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          native-image \
+            -o ibkr-gateway \
+            -cp "dist/ibgroup.web.core.iblink.router.clientportal.gw.jar:build/lib/runtime/*:." ibgroup.web.core.clientportal.gw.GatewayStart
+
+      - name: Build Image (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          native-image `
+            -o ibkr-gateway `
+            -cp "dist/ibgroup.web.core.iblink.router.clientportal.gw.jar;build/lib/runtime/*;." ibgroup.web.core.clientportal.gw.GatewayStart
+
+      - name: Package Zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path ibkr-gateway*,run.*,vertx.jks -DestinationPath ibkr-gateway-${{ matrix.platform }}.zip
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibkr-gateway-${{ matrix.platform }}
+          path: ibkr-gateway-${{ matrix.platform }}.zip
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          merge-multiple: true
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ github.event.inputs.tag_name }} \
+            ./artifacts/*.zip \
+            --title "Release ${{ github.event.inputs.tag_name }}"
