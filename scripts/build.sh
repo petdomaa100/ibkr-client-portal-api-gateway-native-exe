@@ -1,5 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-native-image \
+native-image        \
     -o ibkr-gateway \
     -cp "dist/ibgroup.web.core.iblink.router.clientportal.gw.jar:build/lib/runtime/*:." ibgroup.web.core.clientportal.gw.GatewayStart
