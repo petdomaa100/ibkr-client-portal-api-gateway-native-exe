@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-./ibkr-gateway \
+exec ./ibkr-gateway \
     -Dvertx.disableDnsResolver=true \
     -Djava.net.preferIPv4Stack=true \
     -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory \
