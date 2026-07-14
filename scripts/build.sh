@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
-native-image        \
-    -o ibkr-gateway \
+native-image             \
+    -o ibkr-gateway      \
+    -march=compatibility \
     -cp "dist/ibgroup.web.core.iblink.router.clientportal.gw.jar:build/lib/runtime/*:." ibgroup.web.core.clientportal.gw.GatewayStart
